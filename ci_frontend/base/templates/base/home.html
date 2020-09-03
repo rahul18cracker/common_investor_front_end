@@ -1,0 +1,9 @@
+{% extends "base-layout.html" %}
+{% block content %}
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+   <div>
+       {% for op in output %}
+           {{ op | safe }}
+       {% endfor %}
+   </div>
+{% endblock content %}
