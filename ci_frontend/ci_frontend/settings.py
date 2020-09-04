@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'base.apps.BaseConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -54,7 +55,10 @@ ROOT_URLCONF = 'ci_frontend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        #'BACKEND': 'django.template.backends.jinja2.Jinja2',
+        'DIRS': [
+            'templates/base',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
