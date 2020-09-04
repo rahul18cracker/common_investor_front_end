@@ -1,7 +1,7 @@
 from django.shortcuts import render
-
+from django.http import HttpResponse
+from django.template import loader
 # Create your views here.
-# from django.http import HttpResponse
 
 
 def index(request):
@@ -47,7 +47,7 @@ def index(request):
             </script>
         </div>
            """]
-    return render(request,
-                  'base/home.html',
-                  {'foo': 'bar'})
-    #return HttpResponse("Hello, world. You're at the CI frontend")
+    context = {
+        'output': buf
+    }
+    return render(request, 'base/home.html', context)
