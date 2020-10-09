@@ -55,7 +55,6 @@ ROOT_URLCONF = 'ci_frontend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        #'BACKEND': 'django.template.backends.jinja2.Jinja2',
         'DIRS': [
             'templates/base',
         ],
