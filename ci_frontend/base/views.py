@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.views import generic
 from django.http import HttpResponse
+from .services import get_data_from_rest_api_server
 # Create your views here.
 
 
@@ -115,4 +116,10 @@ def index(request):
     context = {
         'output': buf
     }
+    # experimental test- make a rest API call to back end to see if you can get the data
+    get_data_from_rest_api_server('10-k',
+                                  'msft')
+
+
+
     return render(request, 'base/home.html', context)
