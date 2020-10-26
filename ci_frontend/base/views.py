@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.views import generic
 from django.http import HttpResponse
-from .services import get_data_from_rest_api_server, convert_data_to_data_frame
+# from .services import get_data_from_rest_api_server, convert_data_to_data_frame
 # Create your views here.
 
 
@@ -117,9 +117,9 @@ def index(request):
         'output': buf
     }
     # experimental test- make a rest API call to back end to see if you can get the data
-    packet_data = get_data_from_rest_api_server('10-k',
-                                                'msft')
-    convert_data_to_data_frame(packet_data)
+    # packet_data = get_data_from_rest_api_server('10-k',
+    #                                             'msft')
+    # convert_data_to_data_frame(packet_data)
 
 
 

@@ -3,6 +3,9 @@ import requests
 import pandas as pd
 from retrying import retry
 from requests import HTTPError, Timeout, ConnectionError, URLRequired
+import logging
+logger = logging.getLogger(__name__)
+
 
 CI_BACKEND_REST_API_END_POINT = 'http://127.0.0.1:5000/security/'
 
@@ -50,15 +53,15 @@ class DivGenerator:
             self.packet = requests.get(final_url,
                                        timeout=1).json()
         except URLRequired as ue:
-            # TODO: Convert to logging
-            print("URL %S is not valid err: ",
-                  final_url,
-                  ue)
+            logger.exception("URL %s is not valid err: ",
+                             final_url,
+                             ue)
         except (Timeout, ConnectionError, HTTPError) as try_again:
             # let retry decorator above take care of this
-            # TODO: Convert to use logging
-            print("unable to connect err:", try_again)
+            logger.exception("Unable to connect ", try_again)
             raise try_again
+        # TODO: Add JSON validation to make sure it's not string or None object
+        #       make a static method for validation
 
     def _convert_data_to_data_frame(self) -> 'Pandas data frame':
         """
@@ -79,4 +82,4 @@ class DivGenerator:
                                             security_name)
         self._convert_data_to_data_frame()
 
-    def create_div_from_financial_paramter(self):
+    #def create_div_from_financial_paramter(self):
