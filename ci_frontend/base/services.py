@@ -4,8 +4,8 @@ import pandas as pd
 from retrying import retry
 from requests import HTTPError, Timeout, ConnectionError, URLRequired
 import logging
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 CI_BACKEND_REST_API_END_POINT = 'http://127.0.0.1:5000/security/'
 
@@ -15,6 +15,7 @@ class DivGenerator:
     Will act as data retriver and processor, this will query the backend to get
     data from REST API server and then create a pandas data frame for data analysis
     """
+    MIN_VALID_YEARS_PER_BACKEND_CALL = 10
 
     def __init__(self,
                  form_type: str,
@@ -60,8 +61,20 @@ class DivGenerator:
             # let retry decorator above take care of this
             logger.exception("Unable to connect ", try_again)
             raise try_again
-        # TODO: Add JSON validation to make sure it's not string or None object
-        #       make a static method for validation
+
+    def _validate_incoming_data(self):
+        """
+        A very basic JSON/dict validator for the incoming packet from the backend. In
+        case of missing data or no data it will raise a value error stating the packet
+        is of no use. Caller needs to handle the exception
+        :return: None
+        :rtype:
+        """
+        # Add basic validation for the JSON/dict extracted
+        # In case validation becomes large use this package
+        # https://github.com/vaidik/incoming
+        if self.packet is None or len(self.packet) < self.MIN_VALID_YEARS_PER_BACKEND_CALL:
+            raise ValueError
 
     def _convert_data_to_data_frame(self) -> 'Pandas data frame':
         """
@@ -70,16 +83,34 @@ class DivGenerator:
         :return: data_frame
         :rtype: Pndas data frame
         """
-        # TODO: add exception handling here with logging
+        # data validation is done before this function is called
         self.data_frame = pd.DataFrame.from_dict(self.packet,
                                                  orient='index')
 
     def get_data_generate_data_frame(self,
                                      form_type: str,
                                      security_name: str):
-        # TODO: Add exception handling for both the calls
+        """
+        Completes the following sequence for each call
+        1. Make a call to backend REST API server to get the form based data for a particular security
+        2. Perform a basic validation for the incoming data packet
+        3. After verification push the packet into a Pandas data frame
+        :param form_type: SEC form type like 10-k, 10-q and so on
+        :type form_type: str
+        :param security_name: Security name like 'aapl' for Apple computer
+        :type security_name: str
+        :exception :Throws a Value error which needs to be handled by caller
+        :return: None
+        :rtype: None
+        """
         self._get_data_from_backend_service(form_type,
                                             security_name)
+        try:
+            self._validate_incoming_data()
+        except ValueError as ve:
+            logger.exception("Incoming packet bad, cannot continue to analyze it :",
+                             ve)
+            raise ve
         self._convert_data_to_data_frame()
 
-    #def create_div_from_financial_paramter(self):
+    # def create_div_from_financial_paramter(self):
