@@ -3,6 +3,8 @@ import requests
 import pandas as pd
 from retrying import retry
 from requests import HTTPError, Timeout, ConnectionError, URLRequired
+from plotly.offline import plot
+from plotly.graph_objs import Scatter
 import logging
 
 logger = logging.getLogger(__name__)
@@ -113,4 +115,37 @@ class DivGenerator:
             raise ve
         self._convert_data_to_data_frame()
 
-    # def create_div_from_financial_paramter(self):
+    def create_div_from_financial_paramter(self,
+                                           field_name: str) -> 'HTML <div> string':
+        """
+        Method return a HTML <div> for the field specified. This div string will be retunred to caller to be inserted
+        into an HTML template. This div will be created from the data in the pandas data frame matching the column
+        name of the field_name.
+        e.g - field_name = "accountspayablecurrent"
+        :param field_name: This is the field caller wants a graph div for
+        :type field_name: str
+        :return: HTML <div> string
+        :rtype: str
+        """
+        # check to make sure the field_name exists in the data frame
+        if not {field_name}.issubset(self.data_frame.columns):
+            raise ValueError
+        # reduce CPU load by using logging this way where string is formed if needed
+        logger.info("%s %s %s",
+                    "Found ",
+                    field_name,
+                    " generating the <div>")
+        try:
+            plot_div = plot([Scatter(x=data_frame.index,
+                                     y=data_frame['accountspayablecurrent'],
+                                     mode='lines',
+                                     name='accountspayablecurrent',
+                                     opacity=0.8,
+                                     marker_color='green',
+                                     line_color='deepskyblue')],
+                            output_type='div')
+        except ValueError as ve:
+            logger.exception("Unable to create an HTML <div> for field: %s ",
+                             field_name, ve)
+            return None
+        return plot_div
