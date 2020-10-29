@@ -16,18 +16,29 @@ class DivGenerator:
     """
     Will act as data retriver and processor, this will query the backend to get
     data from REST API server and then create a pandas data frame for data analysis
+    e.g
+        obj = DivGenerator('10=k',
+                            'msft')
     """
     MIN_VALID_YEARS_PER_BACKEND_CALL = 10
 
     def __init__(self,
                  form_type: str,
                  security_name: str):
+        """
+        Class will take a form_type which might be something like '10-k', the security name will be a particular
+        business entity caller is interested in like 'aapl' for Apple Computers
+        :param form_type: SEC form type like e.g '10-k'
+        :type form_type: str
+        :param security_name: ticker or listing symbol like 'aapl' for Apple Computers
+        :type security_name: str
+        """
         self.form_type: str = form_type
         self.security_name: str = security_name
         self.packet: dict = dict()
         self.data_frame: 'DataFrame Pandas' = None
 
-    @staticmethod
+    #@staticmethod
     def retry_on_connection_exceptions(exception) -> bool:
         """
         Takes in exception type from function to compare and retry if it meets the exception
@@ -105,8 +116,7 @@ class DivGenerator:
         :return: None
         :rtype: None
         """
-        self._get_data_from_backend_service(form_type,
-                                            security_name)
+        self._get_data_from_backend_service()
         try:
             self._validate_incoming_data()
         except ValueError as ve:
@@ -136,10 +146,10 @@ class DivGenerator:
                     field_name,
                     " generating the <div>")
         try:
-            plot_div = plot([Scatter(x=data_frame.index,
-                                     y=data_frame['accountspayablecurrent'],
+            plot_div = plot([Scatter(x=self.data_frame.index,
+                                     y=self.data_frame[field_name],
                                      mode='lines',
-                                     name='accountspayablecurrent',
+                                     name=field_name,
                                      opacity=0.8,
                                      marker_color='green',
                                      line_color='deepskyblue')],
@@ -147,5 +157,5 @@ class DivGenerator:
         except ValueError as ve:
             logger.exception("Unable to create an HTML <div> for field: %s ",
                              field_name, ve)
-            return None
+            return "oops statstic not found"
         return plot_div
