@@ -5,6 +5,7 @@ from retrying import retry
 from requests import HTTPError, Timeout, ConnectionError, URLRequired
 from plotly.offline import plot
 from plotly.graph_objs import Scatter
+from plotly import graph_objs as go
 import logging
 
 logger = logging.getLogger(__name__)
@@ -146,14 +147,26 @@ class DivGenerator:
                     field_name,
                     " generating the <div>")
         try:
-            plot_div = plot([Scatter(x=self.data_frame.index,
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=self.data_frame.index,
                                      y=self.data_frame[field_name],
-                                     mode='lines',
                                      name=field_name,
                                      opacity=0.8,
-                                     marker_color='green',
-                                     line_color='deepskyblue')],
-                            output_type='div')
+                                     line_color='deepskyblue'))
+            fig.layout.update(title_text=field_name,
+                              xaxis_rangeslider_visible=False)
+            plot_div = plot(fig,
+                            output_type='div',
+                            include_plotlyjs=False)
+            # plot_div = plot([Scatter(x=self.data_frame.index,
+            #                          y=self.data_frame[field_name],
+            #                          mode='lines',
+            #                          name=field_name,
+            #                          opacity=0.8,
+            #                          marker_color='green',
+            #                          line_color='deepskyblue')],
+            #                 output_type='div',
+            #                 include_plotlyjs=False)
         except ValueError as ve:
             logger.exception("Unable to create an HTML <div> for field: %s ",
                              field_name, ve)

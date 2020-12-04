@@ -1,0 +1,6 @@
+{% extends "base/base-layout.html" %}
+{% block content %}
+    <form action="{% url 'common_stock_search_results' %}" method="get">
+        <input name="q" type="text" placeholder="Search...">
+    </form>
+{% endblock content %}

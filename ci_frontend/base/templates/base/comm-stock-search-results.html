@@ -1,0 +1,10 @@
+{% extends "base/base-layout.html" %}
+{% block content %}
+<ul>
+  {% for stock in object_list %}
+    <li>
+      {{ stock.common_stock_name }}
+    </li>
+  {% endfor %}
+</ul>
+{% endblock content %}
