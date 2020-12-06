@@ -10,28 +10,54 @@ logger = logging.getLogger(__name__)
 # financial parameter is a 1 graph, we will not use any inbuilt DB to retrive
 # any data. Only the REST API backend will be used to get the data about
 # each security back. This is for form 10-k only as of now
-from .models import (Project,
-                     CommonStock)
+from .models import CommonStock
 from .services import DivGenerator
 
 
-# This is search bar testing code
 class CommonStockSearchPageView(generic.TemplateView):
+    """
+    Class controls the display of the search bar page which will be presented to the user
+    when they land on the page to search common stock. We have decided to build common stock
+    report by used 10-k form which have yearly financial data.
+    """
     template_name = 'base/comm-stock-search.html'
 
 
 class SearchResultsView(generic.ListView):
+    """
+    This class is the main functionality provider, it will take the inputs from the get call
+    in the search bar, the user types company 'ticker symbol' or 'company name' from the S&P
+    listed public companies. This class will then make sure the company is listed in the local
+    DB for the frontend. Once that is confirmed it will call the analytical information generation
+    about that company. It will call the supporting classes like div generator which in turn calls
+    the backend REST API server to get company financial data.
+
+    Output:
+    The class generates analytical informaiton about the company being queried
+    Current added functionality of analytical info generated
+    1. Generations of plotly powered graphs to show the financial results about various parameters
+    """
+    # This is the model that stores the fields for the local frontend DB which contains the list of
+    # S&P 500 companies
     model = CommonStock
     context_object_name = 'output'
     template_name = 'base/comm-stock-search-results.html'
 
-    def get_queryset(self):
+    def get_queryset(self) -> 'list[str]':
+        """
+        This is a custom method which will takes inputs from the search bar using a 'GET' call,
+        it will then issue a search query to the fronted DB to make sure the listed company name
+        or ticker symbol is valid from the S&P 500 companies. Then based on the ticker symbol and
+        form_type it will make calls to helper classes to generate analytical data like graphs to
+        present to the user on the search resutls page
+        :return: list of Div strings for platly graphs
+        :rtype: list
+        """
         # gets the HTML form pointer data see HTML file to get context
         query = self.request.GET.get('q')
         object_list = CommonStock.objects.filter(
                         Q(symbol__icontains=query) | Q(Name__icontains=query))
         if object_list.exists():
-            logger.debug(f"Found query {query} in DB returning {object_list.values()}")
             # Extract the fields of 'symbol' and 'form_type' as they are needed to build graphs
             extracted_dict = object_list.values('symbol', 'form_type')[0]
             obj = DivGenerator(extracted_dict['form_type'],
@@ -51,88 +77,5 @@ class SearchResultsView(generic.ListView):
 
             return buf
         else:
-            logger.debug(f"Not able to locate {query} in the DB")
+            logger.info(f"Not able to locate {query} in the DB")
             return "Opps canot find this company"
-# ========SEARCH BAR TESTING CODES ENDS HERE =====================
-
-class CommonStockListView(generic.ListView):
-    """
-    This class will render the graphs prepared from each financial parameter using plotly.
-    e.g:
-    1. graph 1 - AssetsCurrent - non graph part evaluation of this metric, results shown with a tick or cross
-    2. graph 2 - AccountsPayableCurrent - non graph part evaluation of this metric, results shown with a tick or cross
-    .....
-    """
-    model = Project
-    context_object_name = 'output'
-    obj = DivGenerator('10-k',
-                       'msft')
-    obj.get_data_generate_data_frame('10-k',
-                                     'msft')
-    buf = []
-    try:
-        # logger.debug("Reached the div generator call")
-        buf.append(obj.create_div_from_financial_paramter('accountspayablecurrent'))
-        buf.append(obj.create_div_from_financial_paramter('accountsreceivablenetcurrent'))
-    except ValueError as ve:
-        logger.exception("Failed to generate <div> for form:%s BE: %s field:%s ",
-                         '10-k',
-                         'msft',
-                         'accountspayablecurrent')
-    # list of divs, queryset all likes a list and not individual values
-    queryset = buf
-    template_name = 'base/home.html'
-
-
-def index(request):
-    buf = ["""<div>
-
-
-            <div id="2d56a5a7-a7d0-4e9b-a195-de6cab2be27d" class="plotly-graph-div" style="height:100%; width:100%;"></div>
-            <script type="text/javascript">
-
-                    window.PLOTLYENV=window.PLOTLYENV || {};
-                    window.PLOTLYENV.BASE_URL='https://plot.ly';
-
-                if (document.getElementById("2d56a5a7-a7d0-4e9b-a195-de6cab2be27d")) {
-                    Plotly.newPlot(
-                        '2d56a5a7-a7d0-4e9b-a195-de6cab2be27d',
-                        [{"line": {"color": "deepskyblue"}, "name": "Assets", "type": "scatter", "uid": "b9467a96-c331-463c-a582-085260ee3ef9", "x": ["2019", "2018", "2017", "2016", "2015"], "y": [286556.0, 258848.0, 241086.0, 193694.0, 176223.0]}, {"line": {"color": "dimgray"}, "name": "Cash and Cash Equ", "type": "scatter", "uid": "26d9c147-ffd1-48f9-b55c-955cc026bec1", "x": ["2019", "2018", "2017", "2016", "2015"], "y": [11356.0, 11946.0, 7663.0, 6510.0, 5595.0]}, {"line": {"color": "pink"}, "name": "Other Assets", "type": "scatter", "uid": "70d50f18-143d-452c-9bd2-2c8a7c342fec", "x": ["2019", "2018", "2017", "2016", "2015"], "y": [10146.0, 6751.0, 4897.0, 5892.0, 5461.0]}, {"line": {"color": "green"}, "name": "Long term investments", "type": "scatter", "uid": "bc069a1c-a689-4755-bf62-5599bd5c3663", "x": ["2019", "2018", "2017", "2016", "2015"], "y": [2649.0, 1862.0, 6023.0, 10431.0, 12053.0]}, {"line": {"color": "purple"}, "name": "Property and other equipment", "type": "scatter", "uid": "6929577e-61bf-4ceb-8170-3f8640f69b83", "x": ["2019", "2018", "2017", "2016", "2015"], "y": [36477.0, 29460.0, 23734.0, 18356.0, 14731.0]}],
-                        {"title": {"text": "Time Series with Assets, Cash, Other Assets, LTA, Property"}, "xaxis": {"rangeslider": {"visible": true}}},
-                        {"showLink": false, "linkText": "Export to plot.ly", "responsive": true, "plotlyServerURL": "https://plot.ly"}
-                    )
-                };
-
-            </script>
-        </div> """,
-           """
-            <div>
-
-
-            <div id="b3ef125d-8881-4217-b0ee-ec162591fcd3" class="plotly-graph-div" style="height:100%; width:100%;"></div>
-            <script type="text/javascript">
-
-                    window.PLOTLYENV=window.PLOTLYENV || {};
-                    window.PLOTLYENV.BASE_URL='https://plot.ly';
-
-                if (document.getElementById("b3ef125d-8881-4217-b0ee-ec162591fcd3")) {
-                    Plotly.newPlot(
-                        'b3ef125d-8881-4217-b0ee-ec162591fcd3',
-                        [{"line": {"color": "deepskyblue"}, "name": "Liabilities", "type": "scatter", "uid": "20ad29c2-6f8a-49e3-bacb-886b8495a743", "x": ["2019", "2018", "2017", "2016", "2015"], "y": [184226.0, 176130.0, 168692.0, 121697.0, 96140.0]}, {"line": {"color": "dimgray"}, "name": "Goodwill", "type": "scatter", "uid": "9304561b-4ee7-4384-bfae-0b596cb46ed2", "x": ["2019", "2018", "2017", "2016", "2015"], "y": [42026.0, 35683.0, 35122.0, 17872.0, 16939.0]}],
-                        {"title": {"text": "Time Series with Liabilities and Goodwill"}, "xaxis": {"rangeslider": {"visible": true}}},
-                        {"showLink": false, "linkText": "Export to plot.ly", "responsive": true, "plotlyServerURL": "https://plot.ly"}
-                    )
-                };
-
-            </script>
-        </div>
-           """]
-    context = {
-        'output': buf
-    }
-    # experimental test- make a rest API call to back end to see if you can get the data
-    # packet_data = get_data_from_rest_api_server('10-k',
-    #                                             'msft')
-    # convert_data_to_data_frame(packet_data)
-
-    return render(request, 'base/home.html', context)
