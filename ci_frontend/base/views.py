@@ -22,13 +22,37 @@ class CommonStockSearchPageView(generic.TemplateView):
 
 class SearchResultsView(generic.ListView):
     model = CommonStock
+    context_object_name = 'output'
     template_name = 'base/comm-stock-search-results.html'
 
     def get_queryset(self):
         # gets the HTML form pointer data see HTML file to get context
         query = self.request.GET.get('q')
-        object_list = CommonStock.objects.filter(Q(common_stock_name__icontains=query))
-        return object_list
+        object_list = CommonStock.objects.filter(
+                        Q(symbol__icontains=query) | Q(Name__icontains=query))
+        if object_list.exists():
+            logger.debug(f"Found query {query} in DB returning {object_list.values()}")
+            # Extract the fields of 'symbol' and 'form_type' as they are needed to build graphs
+            extracted_dict = object_list.values('symbol', 'form_type')[0]
+            obj = DivGenerator(extracted_dict['form_type'],
+                               extracted_dict['symbol'].lower())
+            obj.get_data_generate_data_frame(extracted_dict['form_type'],
+                                             extracted_dict['symbol'].lower())
+            buf = []
+            try:
+                # logger.debug("Reached the div generator call")
+                buf.append(obj.create_div_from_financial_paramter('accountspayablecurrent'))
+                buf.append(obj.create_div_from_financial_paramter('accountsreceivablenetcurrent'))
+            except ValueError as ve:
+                logger.exception("Failed to generate <div> for form:%s BE: %s field:%s ",
+                                 extracted_dict['form_type'],
+                                 extracted_dict['symbol'].lower(),
+                                 'accountspayablecurrent')
+
+            return buf
+        else:
+            logger.debug(f"Not able to locate {query} in the DB")
+            return "Opps canot find this company"
 # ========SEARCH BAR TESTING CODES ENDS HERE =====================
 
 class CommonStockListView(generic.ListView):

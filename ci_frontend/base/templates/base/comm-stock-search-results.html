@@ -1,10 +1,9 @@
 {% extends "base/base-layout.html" %}
 {% block content %}
-<ul>
-  {% for stock in object_list %}
-    <li>
-      {{ stock.common_stock_name }}
-    </li>
-  {% endfor %}
-</ul>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+   <div>
+       {% for op in output %}
+           {{ op | safe}}
+       {% endfor %}
+   </div>
 {% endblock content %}
