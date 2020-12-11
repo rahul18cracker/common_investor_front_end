@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.views import generic
 from django.http import HttpResponse
 from django.db.models import Q
+from django.template.loader import render_to_string
+from django.http import JsonResponse
 import logging
 
 logger = logging.getLogger(__name__)
@@ -56,7 +58,7 @@ class SearchResultsView(generic.ListView):
         # gets the HTML form pointer data see HTML file to get context
         query = self.request.GET.get('q')
         object_list = CommonStock.objects.filter(
-                        Q(symbol__icontains=query) | Q(Name__icontains=query))
+            Q(symbol__icontains=query) | Q(Name__icontains=query))
         if object_list.exists():
             # Extract the fields of 'symbol' and 'form_type' as they are needed to build graphs
             extracted_dict = object_list.values('symbol', 'form_type')[0]
@@ -79,3 +81,39 @@ class SearchResultsView(generic.ListView):
         else:
             logger.info(f"Not able to locate {query} in the DB")
             return "Opps canot find this company"
+
+# ============ AJAX Experimental code begins ==========
+def ajax_view(request):
+    ctx = {}
+    url_parameter = request.GET.get("q")
+    logger.debug(f"in AJAX VIEW : url_parameter : {url_parameter}")
+
+    if url_parameter:
+        logger.debug(f"in AJAX VIEW: Entered URL paramter if to get object list")
+        object_list = CommonStock.objects.filter(
+            Q(symbol__icontains=url_parameter) | Q(Name__icontains=url_parameter))
+        logger.debug(f"Object list is {object_list}")
+    else:
+        logger.debug(f"in AJAX VIEW: url_parameter not found in else case")
+        object_list = CommonStock.objects.all()
+
+    ctx["companies"] = object_list
+    # AJAX only request return
+    logger.debug("in AJAX VIEW: Going for AJAX check")
+    if request.is_ajax():
+        html = render_to_string(
+            template_name="base/ajax-results-partial.html",
+            context={"companies": object_list}
+        )
+
+        data_dict = {"html_from_view": html}
+        logger.debug("in AJAX VIEW: Giving JSON response for AJAX")
+        return JsonResponse(data=data_dict, safe=False)
+    # HTML request return
+    logger.debug("in AJAX VIEW: Sending html response")
+    return render(request, "base/ajax-test.html", context=ctx)
+
+
+
+
+# ============ AJAX Experimental code ends ==========

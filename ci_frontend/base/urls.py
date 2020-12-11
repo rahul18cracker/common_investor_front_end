@@ -10,5 +10,8 @@ urlpatterns = [
     # Landing page with search bar fpr the user
     path('',
          views.CommonStockSearchPageView.as_view(),
-         name='common-stock-search')
+         name='common-stock-search'),
+    path('company/',
+         views.ajax_view,
+         name="companies")
 ]

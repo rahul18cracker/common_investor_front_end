@@ -1,0 +1,9 @@
+{% if companies %}
+    <ul>
+        {% for obj in companies %}
+        <li>{{ obj.symbol }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No companies found.</p>
+{% endif %}
