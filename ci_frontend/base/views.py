@@ -92,10 +92,11 @@ def ajax_view(request):
         logger.debug(f"in AJAX VIEW: Entered URL paramter if to get object list")
         object_list = CommonStock.objects.filter(
             Q(symbol__icontains=url_parameter) | Q(Name__icontains=url_parameter))
-        logger.debug(f"Object list is {object_list}")
+        logger.debug(f"Object list is {object_list.values('symbol', 'Name', 'Sector')}")
     else:
         logger.debug(f"in AJAX VIEW: url_parameter not found in else case")
-        object_list = CommonStock.objects.all()
+        # object_list = CommonStock.objects.all()
+        object_list = []
 
     ctx["companies"] = object_list
     # AJAX only request return
@@ -110,8 +111,28 @@ def ajax_view(request):
         logger.debug("in AJAX VIEW: Giving JSON response for AJAX")
         return JsonResponse(data=data_dict, safe=False)
     # HTML request return
-    logger.debug("in AJAX VIEW: Sending html response")
+    #logger.debug(f"in AJAX VIEW: Sending html response {object_list.values('symbol')[0]}")
+    if object_list:
+        extracted_dict = object_list.values('symbol', 'form_type')[0]
+        obj = DivGenerator(extracted_dict['form_type'],
+                           extracted_dict['symbol'].lower())
+        obj.get_data_generate_data_frame(extracted_dict['form_type'],
+                                         extracted_dict['symbol'].lower())
+        buf = []
+        try:
+            # logger.debug("Reached the div generator call")
+            buf.append(obj.create_div_from_financial_paramter('accountspayablecurrent'))
+            buf.append(obj.create_div_from_financial_paramter('accountsreceivablenetcurrent'))
+        except ValueError as ve:
+            logger.exception("Failed to generate <div> for form:%s BE: %s field:%s ",
+                             extracted_dict['form_type'],
+                             extracted_dict['symbol'].lower(),
+                             'accountspayablecurrent')
+
+        #return buf
+        ctx['output'] = buf
     return render(request, "base/ajax-test.html", context=ctx)
+    # return render(request, "base/ajax-test.html", context=ctx)
 
 
 
