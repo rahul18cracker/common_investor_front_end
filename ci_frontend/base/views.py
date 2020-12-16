@@ -16,13 +16,68 @@ from .models import CommonStock
 from .services import DivGenerator
 
 
-class CommonStockSearchPageView(generic.TemplateView):
+class CommonStockSearchPageView(generic.ListView):
     """
     Class controls the display of the search bar page which will be presented to the user
     when they land on the page to search common stock. We have decided to build common stock
     report by used 10-k form which have yearly financial data.
     """
-    template_name = 'base/comm-stock-search.html'
+    # template_name = 'base/comm-stock-search.html'
+    template_name = 'base/ajax-test.html'
+    model = CommonStock
+    context_object_name = 'output'
+
+    def render_to_response(self,
+                           context,
+                           **response_kwargs):
+        """ Allow AJAX requests to be handled more gracefully """
+        logging.debug("Entering the common render function")
+        ctx = {}
+        ctx["output"] = " "
+        if self.request.is_ajax():
+            query = self.request.GET.get('q')
+            object_list = CommonStock.objects.filter(
+                Q(symbol__icontains=query) | Q(Name__icontains=query))
+            html = render_to_string(
+                template_name="base/ajax-results-partial.html",
+                context={"companies": object_list}
+            )
+
+            data_dict = {"html_from_view": html}
+            logger.debug("in AJAX VIEW: Giving JSON response for AJAX")
+            return JsonResponse(data=data_dict,
+                                safe=False,
+                                **response_kwargs)
+        else:
+            # Regular HTTP request
+            query = self.request.GET.get('q')
+            if query:
+                object_list = CommonStock.objects.filter(
+                    Q(symbol__icontains=query) | Q(Name__icontains=query))
+                if object_list:
+                    extracted_dict = object_list.values('symbol', 'form_type')[0]
+                    obj = DivGenerator(extracted_dict['form_type'],
+                                       extracted_dict['symbol'].lower())
+                    obj.get_data_generate_data_frame(extracted_dict['form_type'],
+                                                     extracted_dict['symbol'].lower())
+                    buf = []
+                    try:
+                        # logger.debug("Reached the div generator call")
+                        buf.append(obj.create_div_from_financial_paramter('accountspayablecurrent'))
+                        buf.append(obj.create_div_from_financial_paramter('accountsreceivablenetcurrent'))
+                    except ValueError as ve:
+                        logger.exception("Failed to generate <div> for form:%s BE: %s field:%s ",
+                                         extracted_dict['form_type'],
+                                         extracted_dict['symbol'].lower(),
+                                         'accountspayablecurrent')
+
+                    # return buf
+                    ctx['output'] = buf
+                    ctx['companies'] = extracted_dict['symbol'].lower()
+            return render(self.request,
+                          "base/ajax-test.html", context=ctx)
+            #return super(CommonStockSearchPageView, self).render_to_response(context,
+            #                                                                 **response_kwargs)
 
 
 class SearchResultsView(generic.ListView):
@@ -43,44 +98,69 @@ class SearchResultsView(generic.ListView):
     # S&P 500 companies
     model = CommonStock
     context_object_name = 'output'
-    template_name = 'base/comm-stock-search-results.html'
+    template_name = 'base/ajax-test.html'
 
-    def get_queryset(self) -> 'list[str]':
-        """
-        This is a custom method which will takes inputs from the search bar using a 'GET' call,
-        it will then issue a search query to the fronted DB to make sure the listed company name
-        or ticker symbol is valid from the S&P 500 companies. Then based on the ticker symbol and
-        form_type it will make calls to helper classes to generate analytical data like graphs to
-        present to the user on the search resutls page
-        :return: list of Div strings for platly graphs
-        :rtype: list
-        """
-        # gets the HTML form pointer data see HTML file to get context
+    # template_name = 'base/comm-stock-search-results.html'
+    def render_to_response(self,
+                           context,
+                           **response_kwargs):
+        """ Allow AJAX requests to be handled more gracefully """
+        logging.critical("Entered the render response function")
         query = self.request.GET.get('q')
         object_list = CommonStock.objects.filter(
             Q(symbol__icontains=query) | Q(Name__icontains=query))
-        if object_list.exists():
-            # Extract the fields of 'symbol' and 'form_type' as they are needed to build graphs
-            extracted_dict = object_list.values('symbol', 'form_type')[0]
-            obj = DivGenerator(extracted_dict['form_type'],
-                               extracted_dict['symbol'].lower())
-            obj.get_data_generate_data_frame(extracted_dict['form_type'],
-                                             extracted_dict['symbol'].lower())
-            buf = []
-            try:
-                # logger.debug("Reached the div generator call")
-                buf.append(obj.create_div_from_financial_paramter('accountspayablecurrent'))
-                buf.append(obj.create_div_from_financial_paramter('accountsreceivablenetcurrent'))
-            except ValueError as ve:
-                logger.exception("Failed to generate <div> for form:%s BE: %s field:%s ",
-                                 extracted_dict['form_type'],
-                                 extracted_dict['symbol'].lower(),
-                                 'accountspayablecurrent')
+        if self.request.is_ajax():
+            html = render_to_string(
+                template_name="base/ajax-results-partial.html",
+                context={"companies": object_list}
+            )
 
-            return buf
+            data_dict = {"html_from_view": html}
+            logger.debug("in AJAX VIEW: Giving JSON response for AJAX")
+            return JsonResponse(data=data_dict,
+                                safe=False,
+                                **response_kwargs)
         else:
-            logger.info(f"Not able to locate {query} in the DB")
-            return "Opps canot find this company"
+            # Regular HTTP request
+            return super(SearchResultsView, self).render_to_response(context, **response_kwargs)
+
+    # def get_queryset(self) -> 'list[str]':
+    #     """
+    #     This is a custom method which will takes inputs from the search bar using a 'GET' call,
+    #     it will then issue a search query to the fronted DB to make sure the listed company name
+    #     or ticker symbol is valid from the S&P 500 companies. Then based on the ticker symbol and
+    #     form_type it will make calls to helper classes to generate analytical data like graphs to
+    #     present to the user on the search resutls page
+    #     :return: list of Div strings for platly graphs
+    #     :rtype: list
+    #     """
+    #     # gets the HTML form pointer data see HTML file to get context
+    #     query = self.request.GET.get('q')
+    #     object_list = CommonStock.objects.filter(
+    #         Q(symbol__icontains=query) | Q(Name__icontains=query))
+    #     if object_list.exists():
+    #         # Extract the fields of 'symbol' and 'form_type' as they are needed to build graphs
+    #         extracted_dict = object_list.values('symbol', 'form_type')[0]
+    #         obj = DivGenerator(extracted_dict['form_type'],
+    #                            extracted_dict['symbol'].lower())
+    #         obj.get_data_generate_data_frame(extracted_dict['form_type'],
+    #                                          extracted_dict['symbol'].lower())
+    #         buf = []
+    #         try:
+    #             # logger.debug("Reached the div generator call")
+    #             buf.append(obj.create_div_from_financial_paramter('accountspayablecurrent'))
+    #             buf.append(obj.create_div_from_financial_paramter('accountsreceivablenetcurrent'))
+    #         except ValueError as ve:
+    #             logger.exception("Failed to generate <div> for form:%s BE: %s field:%s ",
+    #                              extracted_dict['form_type'],
+    #                              extracted_dict['symbol'].lower(),
+    #                              'accountspayablecurrent')
+    #
+    #         return buf
+    #     else:
+    #         logger.info(f"Not able to locate {query} in the DB")
+    #         return "Opps canot find this company"
+
 
 # ============ AJAX Experimental code begins ==========
 def ajax_view(request):
@@ -111,7 +191,7 @@ def ajax_view(request):
         logger.debug("in AJAX VIEW: Giving JSON response for AJAX")
         return JsonResponse(data=data_dict, safe=False)
     # HTML request return
-    #logger.debug(f"in AJAX VIEW: Sending html response {object_list.values('symbol')[0]}")
+    # logger.debug(f"in AJAX VIEW: Sending html response {object_list.values('symbol')[0]}")
     if object_list:
         extracted_dict = object_list.values('symbol', 'form_type')[0]
         obj = DivGenerator(extracted_dict['form_type'],
@@ -129,12 +209,9 @@ def ajax_view(request):
                              extracted_dict['symbol'].lower(),
                              'accountspayablecurrent')
 
-        #return buf
+        # return buf
         ctx['output'] = buf
     return render(request, "base/ajax-test.html", context=ctx)
     # return render(request, "base/ajax-test.html", context=ctx)
-
-
-
 
 # ============ AJAX Experimental code ends ==========

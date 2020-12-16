@@ -6,11 +6,13 @@ urlpatterns = [
     # This is the results page after the search is done
     path('search/',
          views.SearchResultsView.as_view(),
-         name='common_stock_search_results'),
+         #name='common_stock_search_results'),
+         name='companies'),
+
     # Landing page with search bar fpr the user
     path('',
          views.CommonStockSearchPageView.as_view(),
-         name='common-stock-search'),
+         name='companies'),
     path('company/',
          views.ajax_view,
          name="companies")
